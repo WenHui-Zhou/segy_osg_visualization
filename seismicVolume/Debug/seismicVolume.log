@@ -1,0 +1,4 @@
+﻿  main.cpp
+e:\workspace\osgtext\seismicvolume - norender\seismicvolume\segy.h(384): warning C4018: “<”: 有符号/无符号不匹配
+e:\workspace\osgtext\seismicvolume - norender\seismicvolume\segy.h(383): warning C4101: “_char2int”: 未引用的局部变量
+  seismicVolume.vcxproj -> E:\workSpace\OSGText\seismicVolume - norender\Debug\seismicVolume.exe
