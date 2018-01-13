@@ -13,12 +13,56 @@
 
 using namespace std;
 
+#define GLSL400(src) "#version 400\n" #src
+
+const char* vertSource1 = GLSL400 (
+uniform mat4 ModelViewProjectionMatrix;
+uniform float maxValue;
+layout(location = 0) in vec4 Vertex;
+layout(location = 1) in float intense;
+out vec4 pixColor;
+void main(void)
+{
+	gl_Position = ModelViewProjectionMatrix * Vertex;
+	if (intense>0)
+	{
+		pixColor = vec4(1-intense/maxValue,1-intense/maxValue,1.0,1.0);
+	}
+	else
+	{
+		pixColor = vec4(1.0,1+intense/maxValue,1+intense/maxValue,1.0);
+	}
+}
+);
+
+const char* fragSource1 = GLSL400(
+	in vec4 pixColor;
+void main(void)
+{
+	gl_FragColor = pixColor;
+}
+);
+
+struct ModelViewProjectionMatrixCallback:public osg::Uniform::Callback{
+	ModelViewProjectionMatrixCallback(osg::Camera* camera):_camera(camera){}
+	virtual void operator()(osg::Uniform* uniform, osg::NodeVisitor* nv) {
+		osg::Matrixd viewMatrix = _camera->getViewMatrix();
+		osg::Matrixd modelMatrix = osg::computeLocalToWorld(nv->getNodePath());
+		osg::Matrixd modelViewProjectionMatrix = modelMatrix * viewMatrix * _camera->getProjectionMatrix();
+		uniform->set(modelViewProjectionMatrix);
+	}
+
+	osg::Camera* _camera;
+};
+
+
+
 segy RunSegy()
 {
 	segy sgy;
 //	sgy.ReadTraceHeader("shot.segy");
-//	sgy.ReadTraceHeader("LineE.sgy");
-	sgy.ReadTraceHeader("pg_lm.segy");
+	sgy.ReadTraceHeader("LineE.sgy");
+//	sgy.ReadTraceHeader("pg_lm.segy");
 	sgy.ReadAllTrace();
 //	sgy.PrintTextHeader();
 //	sgy.PrintBinaryHeader();
@@ -30,26 +74,42 @@ segy RunSegy()
 int main( int argc, char** argv )
 {
 	osg::ref_ptr<osg::Group> root = new osg::Group;
-//	osg::ref_ptr<osg::Geode> geode = new osg::Geode;
 	osg::ref_ptr<osg::Geometry> geom = new osg::Geometry;
-//	geode->addDrawable(geom);
 	segy sgy = RunSegy();
-	sgy.drawAllTrace();													//¶ÁÈ¡Ğè»æÖÆµÄÊı¾İ£¬ÑÕÉ«Ó³Éä
-	geom->setVertexArray(sgy.data);
-	geom->setColorArray(sgy.color);
-	geom->setColorBinding(osg::Geometry::BIND_PER_VERTEX);				//ÑÕÉ«°ó¶¨¶ÔÓ¦µÄÒ»¸öµã
+	sgy.readFaceData();
 	osg::ref_ptr<osgViewer::Viewer> viewer = new osgViewer::Viewer;
-	sgy.setUnitGeom(geom);          									//Éè¼ÆĞèÒª»æÖÆµÄÍ¼Ôª
+	osg::ref_ptr<osg::Camera> camera = viewer->getCamera();
+	//è®¾ç½®è¾“å…¥shader ä¸­çš„æ•°æ®
+	geom->setVertexAttribArray(0,sgy.data,osg::Array::BIND_PER_VERTEX);
+	geom->setVertexAttribArray(1,sgy.intensity,osg::Array::BIND_PER_VERTEX);
+
+	sgy.setUnitGeom(geom);          									//è®¾è®¡éœ€è¦ç»˜åˆ¶çš„å›¾å…ƒ
+	//å®šä¹‰shader
+	osg::ref_ptr<osg::Shader> vertShader = new osg::Shader(osg::Shader::VERTEX,vertSource1);
+	osg::ref_ptr<osg::Shader> fragShader = new osg::Shader(osg::Shader::FRAGMENT,fragSource1);
+	osg::ref_ptr<osg::Program> Program = new osg::Program;
+	Program->addShader(vertShader.get());
+	Program->addShader(fragShader.get());
+
 	osg::DisplaySettings* displaySettings = new osg::DisplaySettings;
 	viewer->setDisplaySettings(displaySettings);
 	geom->setUseDisplayList(false);
-	osg::ref_ptr<osg::StateSet> stateset = root->getOrCreateStateSet();
+	osg::StateSet* stateset = root->getOrCreateStateSet();
+	stateset->setAttributeAndModes(Program.get(),osg::StateAttribute::ON); //è®¾ç½®shaderå±æ€§
+	// add uniforms
+	osg::Uniform* modelViewProjectionMatrix = new osg::Uniform(osg::Uniform::FLOAT_MAT4, "ModelViewProjectionMatrix");
+	modelViewProjectionMatrix->setUpdateCallback(new ModelViewProjectionMatrixCallback(camera));
+	stateset->addUniform(modelViewProjectionMatrix);
+	stateset->addUniform(new osg::Uniform("maxValue",sgy.maxValue));
 	// turn lights off
 	stateset->setMode(GL_LIGHTING, osg::StateAttribute::OFF);
 	stateset->setMode(GL_BLEND, osg::StateAttribute::ON);
+
 	root->addChild(geom.get());
+
 	osgUtil::Optimizer optimzer;
 	optimzer.optimize(root);
+	
 	viewer->setSceneData(root.get());
 	viewer->realize();
 	viewer->run();
