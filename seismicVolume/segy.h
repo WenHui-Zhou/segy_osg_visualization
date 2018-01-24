@@ -13,7 +13,7 @@
 using namespace std;
 
 /*
-¶ş½øÖÆÎÄ¼şÍ· Èç¹ûÒªÊ¹ÓÃµÄ»°ĞèÒª±ä»»
+äºŒè¿›åˆ¶æ–‡ä»¶å¤´ å¦‚æœè¦ä½¿ç”¨çš„è¯éœ€è¦å˜æ¢
 */
 struct binaryFileHeader{
     int JOB_ID;                
@@ -23,7 +23,7 @@ struct binaryFileHeader{
     short int NUM_OF_AUX;
     short int INTERVAL_MS;
     short int INTERVAL_MS_ORI;
-    unsigned short int NUM_OF_SAMPLES;				// number of samples Ò»¸ötraceÖĞµÄÑù±¾µã
+    unsigned short int NUM_OF_SAMPLES;				// number of samples ä¸€ä¸ªtraceä¸­çš„æ ·æœ¬ç‚¹
     unsigned short int NUM_OF_SAMPLES_ORI;
     short int SAMPLE_FORMAT;
     short int ENSEMBLE;
@@ -51,7 +51,7 @@ struct binaryFileHeader{
 };
 
 /*
-µÀÍ·Êı¾İ
+é“å¤´æ•°æ®
 */
 struct traceHeader {
     int TRACE_SEQ_GLOBAL;
@@ -92,8 +92,8 @@ struct traceHeader {
     short int DELAY_T;
     short int MUTE_T_STRT;
     short int MUTE_T_END;
-    unsigned short int NUM_OF_SAMPL;				// Ã¿Ò»¸öµÀÖĞµÄÑù±¾Êı
-    unsigned short int SAMPLE_INTRVL;				// Ñù±¾µÄ¼ä¸ô
+    unsigned short int NUM_OF_SAMPL;				// æ¯ä¸€ä¸ªé“ä¸­çš„æ ·æœ¬æ•°
+    unsigned short int SAMPLE_INTRVL;				// æ ·æœ¬çš„é—´éš”
     short int GAIN_TYPE;
     short int GAIN_CONST;
     short int GAIN_INIT;
@@ -127,8 +127,8 @@ struct traceHeader {
     short int OVER_TRAVEL;
     int ENS_COOR_X;
     int ENS_COOR_Y;
-    int INLINE;										//inlineÖµ
-    int CROSS;										//crosslineÖµ
+    int INLINE;										//inlineå€¼
+    int CROSS;										//crosslineå€¼
     int SHOOTPOINT;
     short int SHOOTPOINT_SCALE;
     short int TRACE_UNIT;
@@ -143,7 +143,7 @@ struct traceHeader {
     char UNNASSIGNED1 [6];
 };
 /*
-ÓÃ²é±íµÄ·½Ê½½«ebcdic±àÂë×ª»»ÎªasciiÂë¸ñÊ½
+ç”¨æŸ¥è¡¨çš„æ–¹å¼å°†ebcdicç¼–ç è½¬æ¢ä¸ºasciiç æ ¼å¼
 */
 static const unsigned char e2a[256] = {
           0,  1,  2,  3,156,  9,134,127,151,141,142, 11, 12, 13, 14, 15,
@@ -165,44 +165,46 @@ static const unsigned char e2a[256] = {
 };
 
 /*
-segyÎÄ¼ş¶ÁÈ¡£¬¿ÉÊÓ»¯Àà
+segyæ–‡ä»¶è¯»å–ï¼Œå¯è§†åŒ–ç±»
 */
 class segy
 {
 public:
 	segy();
     ~segy();
-    void ReadAllTrace();												//¶ÁÈ¡ËùÓĞµÄµØÕğÊı¾İ
-	void ReadTraceHeader(std::string fl);                               //¶ÁÈ¡Ç°3200×Ö¶ÎºÍ400×Ö¶Î£¬¶Á³öinline,xline,ÒÔ¼°sample of trace
-	void ReadOneTrace();								                //¶ÁÈ¡Ò»¸öÇĞÃæµØÕğµÀÊı¾İ
-    void PrintTraceHeader();                                            //µØÕğµÀµÀÍ·Êı¾İ240×Ö½Ú
-    void PrintTextHeader();                                             //Êä³öÎÄ¼şÆğÊ¼Î»ÖÃµÄ3200×Ö½Ú
-    void PrintBinaryHeader();                                           //Êä³ö¶ş½øÖÆÎÄ¼şÍ·400×Ö½Ú
+    void ReadAllTrace();												//è¯»å–æ‰€æœ‰çš„åœ°éœ‡æ•°æ®
+	void ReadTraceHeader(std::string fl);                               //è¯»å–å‰3200å­—æ®µå’Œ400å­—æ®µï¼Œè¯»å‡ºinline,xline,ä»¥åŠsample of trace
+	void ReadOneTrace(int typeNum,int pos);							    //è¯»å–ä¸€ä¸ªåˆ‡é¢åœ°éœ‡é“æ•°æ®,typenumä¸ºåˆ‡é¢ç±»å‹ï¼Œposä¸ºä½ç½®
+    void PrintTraceHeader();                                            //åœ°éœ‡é“é“å¤´æ•°æ®240å­—èŠ‚
+    void PrintTextHeader();                                             //è¾“å‡ºæ–‡ä»¶èµ·å§‹ä½ç½®çš„3200å­—èŠ‚
+    void PrintBinaryHeader();                                           //è¾“å‡ºäºŒè¿›åˆ¶æ–‡ä»¶å¤´400å­—èŠ‚
 	void getBuf(const char* const src,char* const &buf,
 		const int &offset,const int &len);
 	void switchByte(char* const c,const int &len);
-    void drawAllTrace();                                                //»æÖÆÃæ
-	void colorMap();                                                    //Ç¿¶È--ÑÕÉ«Ó³Éä
-	void readFaceData();                                                //¶Á³ö¶¥µãÊı¾İ
-	void setUnitGeom(osg::ref_ptr<osg::Geometry> geom);                 //ÉèÖÃÍ¼Ôªµ¥Ôª
-    unsigned char TFileHead_ [3200];
+    void drawAllTrace();                                                //ç»˜åˆ¶é¢
+	void colorMap();                                                    //å¼ºåº¦--é¢œè‰²æ˜ å°„
+	void readFaceData();                                                //è¯»å‡ºé¡¶ç‚¹æ•°æ®
+	void setUnitGeom(osg::ref_ptr<osg::Geometry> geom);                 //è®¾ç½®å›¾å…ƒå•å…ƒ	
+	unsigned char TFileHead_ [3200];
     unsigned char ExTFileHead_ [3200];
     binaryFileHeader BFileHead_;
     traceHeader traceHeader_;
-    float **Trace_;														//¶şÎ¬µÄµØÕğµÀ¾ØÕó
-	float ***VolumeTrace;												//ÈıÎ¬µØÕğÊı¾İ£¬Éú³ÉµÄÊı¾İ VolumeTrace[inline-1][reaceNum-1][sampleNum-1]
-	int fileLength;														//ÎÄ¼ş³¤¶È
-	int traceNum;														// µØÕğµÀµÄµÀÊı   
-	int sampleNum;														//²ÉÑùµãÊı
-	int InLine;															//×İÏòÉÏµÄÊıÁ¿
-	int CrossLine;														//µØÕğµÀÊı£¬ºáÏòÉÏµÄÊıÁ¿£¬µÈÓÚtraceNum
-	float maxValue;														//×î´óµÄµØÕğÇ¿¶ÈÖµ£¬ÓÃÓÚ±ê×¼»¯µØÕğÇ¿¶È£¨ÑÕÉ«Ó³Éä£©
-	std::vector<float> intensity;										//ÓÃÓÚ´æ·ÅµØÕğÇ¿¶ÈÊı¾İ£¨´æ·ÅĞèÒª»æÖÆµÄµãÊı¾İ£©
-	FILE *ff;															//SEGYÎÄ¼şÖ¸Õë
-	void outputFile();													//µ¼³öÎÄ¼ş
+//    float **Trace_;														//äºŒç»´çš„åœ°éœ‡é“çŸ©é˜µ
+//	float ***VolumeTrace;												//ä¸‰ç»´åœ°éœ‡æ•°æ®ï¼Œç”Ÿæˆçš„æ•°æ® VolumeTrace[inline-1][traceNum-1][sampleNum-1]
+	int fileLength;														//æ–‡ä»¶é•¿åº¦
+	int traceNum;														// åœ°éœ‡é“çš„é“æ•°   
+	int sampleNum;														//é‡‡æ ·ç‚¹æ•°
+	int InLine;															//çºµå‘ä¸Šçš„æ•°é‡
+	int CrossLine;														//åœ°éœ‡é“æ•°ï¼Œæ¨ªå‘ä¸Šçš„æ•°é‡ï¼Œç­‰äºtraceNum
+	float maxValue;														//æœ€å¤§çš„åœ°éœ‡å¼ºåº¦å€¼ï¼Œç”¨äºæ ‡å‡†åŒ–åœ°éœ‡å¼ºåº¦ï¼ˆé¢œè‰²æ˜ å°„ï¼‰
+	char* buffer;                                                       // å­˜æ”¾æ–‡ä»¶å†…å®¹
+	osg::ref_ptr<osg::FloatArray> intensity;							//ç”¨äºå­˜æ”¾åœ°éœ‡å¼ºåº¦æ•°æ®ï¼ˆå­˜æ”¾éœ€è¦ç»˜åˆ¶çš„ç‚¹æ•°æ®ï¼‰
+	FILE *ff;															//SEGYæ–‡ä»¶æŒ‡é’ˆ
+	int tempInLine;                                                     //ç”¨äºæš‚å­˜InLineæ•°æ®
+	void outputFile();													//å¯¼å‡ºæ–‡ä»¶
     std::string filename_;
-	osg::ref_ptr<osg::Vec3Array> data;
-	osg::ref_ptr<osg::Vec4Array> color;
+	osg::ref_ptr<osg::Vec3Array> data;                                  //é¡¶ç‚¹æ•°æ®
+	osg::ref_ptr<osg::Vec4Array> color;                                 //é¢œè‰²æ•°æ®
 private:
     int toLitteEnd(int);
     unsigned int toLitteEnd(unsigned int);
@@ -214,7 +216,9 @@ private:
 segy::segy(){
 	data = new osg::Vec3Array;
 	color = new osg::Vec4Array;
+	intensity = new osg::FloatArray;
 	maxValue = 0.0;
+	tempInLine = 0;
 }
 
 segy::~segy(){
@@ -256,7 +260,7 @@ short int segy::toLitteEnd( short int a){
     return (a<<8) | (tmp);
 }
 /*
-ibm±àÂë×ª±äÎªieee±àÂë
+ibmç¼–ç è½¬å˜ä¸ºieeeç¼–ç 
 */
 float segy::toIeee(uint32_t ibm)   
 {
@@ -306,118 +310,292 @@ float segy::toIeee(uint32_t ibm)
 
    
 /*
-ÎÄ¼ş³¤¶È¼õÈ¥3600µÄµÀÍ·£¬Ê£ÏÂµÄ³¤¶È¾ÍÊÇµØÕğµÀµÀÍ·ÓëÊı¾İµÄ³¤¶È¡£
-toLitteEnd(BFileHead_.NUM_OF_SAMPLES)ÊÇÖ¸Ò»¸öµØÕğµÀÖĞµÄÑù±¾µãÊı£¬Ã¿Ò»¸ö4×Ö½Ú
-240×Ö½ÚÖ¸µÄÊÇµÀÍ·µÄ³¤¶È¡£
+æ–‡ä»¶é•¿åº¦å‡å»3600çš„é“å¤´ï¼Œå‰©ä¸‹çš„é•¿åº¦å°±æ˜¯åœ°éœ‡é“é“å¤´ä¸æ•°æ®çš„é•¿åº¦ã€‚
+toLitteEnd(BFileHead_.NUM_OF_SAMPLES)æ˜¯æŒ‡ä¸€ä¸ªåœ°éœ‡é“ä¸­çš„æ ·æœ¬ç‚¹æ•°ï¼Œæ¯ä¸€ä¸ª4å­—èŠ‚
+240å­—èŠ‚æŒ‡çš„æ˜¯é“å¤´çš„é•¿åº¦ã€‚
 */
 void segy::ReadTraceHeader(std::string fl)
 {
-	char temp [4000];  
-    filename_ = fl;
-	std::fstream in_;
-    in_.open(filename_.c_str(),std::ifstream::in);					//¶ÁÈëÎÄ¼ş
-    if(in_.fail()) 
-    {
-        printf("Error opening file %s \n",filename_.c_str());
-        exit(0);
-    }
-	in_.seekg (0, in_.end);											//½«Ö¸ÕëÒÆ¶¯µ½ÎÄ¼şÄ©Î²
-	fileLength = in_.tellg();										//µÃµ½ÎÄ¼şµÄ³¤¶È
-	in_.seekg(0,in_.beg);											//ÖØĞÂ½«Ö¸ÕëÒÆ¶¯µ½ÎÄ¼şÍ·
-    memset( TFileHead_, '\0', sizeof(char) * 3200 );				//ÄÚ´æ³õÊ¼»¯£¬È«³õÊ¼»¯Îª0
-    in_.read((char *)TFileHead_, sizeof(TFileHead_));				//½«Ç°3200×Ö½ÚĞ´ÈëTFileHeadÖĞ
-    in_.read(temp, sizeof(BFileHead_));								//ÏòtempÖĞĞ´Èë¶ş½øÖÆÁ÷¼´400×Ö½ÚµÄÄÚÈİ
-    std::memcpy(&BFileHead_,temp,sizeof(BFileHead_));				//½«¶ş½øÖÆÁ÷µÄÄÚÈİ¿½±´µ½BFileHead_ÖĞÈ¥
-	sampleNum = toLitteEnd(BFileHead_.NUM_OF_SAMPLES);				//²ÉÑùµãÊı
-	CrossLine = traceNum = toLitteEnd(BFileHead_.NUM_OF_TRACE);		// CrossLineµÄÖµ
-	if (CrossLine==1||CrossLine==0)									//µ¥Æ¬,µ±Í·ÎÄ¼şÖĞBFileHead_.NUM_OF_TRACE ÎªÁãÊ±£¬´ú±íËûÊÇ¶şÎ¬µÄÊı¾İcorssLineÖØĞÂ¼ÆËã
+    filename_ = fl;	
+	ff = fopen(filename_.c_str(),"rb");       //è¯»å…¥æ–‡ä»¶
+	if (ff==NULL)
+	{
+		cout<<"read data error";
+		exit(1);
+	}
+	//è·å–æ–‡ä»¶å¤§å°
+	fseek(ff,0,SEEK_END);                     //å°†æŒ‡é’ˆç§»åŠ¨åˆ°æ–‡ä»¶æœ«å°¾
+	fileLength = ftell(ff);                   //å¾—åˆ°æ–‡ä»¶çš„é•¿åº¦
+	rewind(ff);									//é‡æ–°å°†æŒ‡é’ˆç§»åŠ¨åˆ°æ–‡ä»¶å¤´
+	int result;
+	
+	buffer = (char*) malloc(sizeof(char)*fileLength);
+	if (buffer==NULL)
+	{
+		cout<<"cant malloc";
+		exit(0);
+	}
+	result = fread(buffer,1,fileLength,ff);
+	if (result!=fileLength)
+	{
+		cout<<"fread wrong";
+		exit(0);
+	}
+	memset( TFileHead_, '\0', sizeof(char) * 3200 );				//å†…å­˜åˆå§‹åŒ–ï¼Œå…¨åˆå§‹åŒ–ä¸º0
+	strncpy((char *)TFileHead_,buffer, sizeof(TFileHead_));			//å°†å‰3200å­—èŠ‚å†™å…¥TFileHeadä¸­
+	buffer += sizeof(TFileHead_);
+	std::memcpy(&BFileHead_,buffer,sizeof(BFileHead_));				//å°†äºŒè¿›åˆ¶æµçš„å†…å®¹æ‹·è´åˆ°BFileHead_ä¸­å»
+	sampleNum = toLitteEnd(BFileHead_.NUM_OF_SAMPLES);				//é‡‡æ ·ç‚¹æ•°
+	CrossLine = traceNum = toLitteEnd(BFileHead_.NUM_OF_TRACE);	
+	if (CrossLine==1||CrossLine==0)									//å•ç‰‡,å½“å¤´æ–‡ä»¶ä¸­BFileHead_.NUM_OF_TRACE ä¸ºé›¶æ—¶ï¼Œä»£è¡¨ä»–æ˜¯äºŒç»´çš„æ•°æ®corssLineé‡æ–°è®¡ç®—
 	{
 		InLine = 0;
-		traceNum = CrossLine = (fileLength-3600)/(240+4*sampleNum);	//µØÕğµÀµÀÊı
+		traceNum = CrossLine = (fileLength-3600)/(240+4*sampleNum);	//åœ°éœ‡é“é“æ•°
 	}
-	else															//ÈıÎ¬Êı¾İ °üº¬¶à¸öÃæ
+	else															//ä¸‰ç»´æ•°æ® åŒ…å«å¤šä¸ªé¢
 	{	
-		InLine = (fileLength-3600)/(240+4*sampleNum)/CrossLine;		//µØÕğµÀµÀÊı
+		InLine = (fileLength-3600)/(240+4*sampleNum)/CrossLine;		//åœ°éœ‡é“é“æ•°
+		if (InLine == 1)                                            //å½“InLineæ˜¯1æ—¶ï¼Œä»…æœ‰ä¸€ç‰‡æ•°æ®ï¼Œå› æ­¤ä¹Ÿæ˜¯å•ç‰‡
+		{
+			InLine = 0; 
+		}
 	}
-	in_.read(temp, sizeof(traceHeader_));							//¶ÁÈ¡µØÕğµÀÊı¾İÍ·Êı¾İ£¨µÚÒ»¸öµØÕğµÀµÄµÀÍ·ĞÅÏ¢£©
-	std::memcpy(&traceHeader_,temp,sizeof(traceHeader_));			//½«µØÕğµÀÍ·Êı¾İ240×Ö½ÚĞ´µ½traceHeaderÖĞÈ¥
+																	//è¯»å–åœ°éœ‡é“æ•°æ®å¤´æ•°æ®ï¼ˆç¬¬ä¸€ä¸ªåœ°éœ‡é“çš„é“å¤´ä¿¡æ¯ï¼‰
+	buffer += sizeof(BFileHead_);
+	std::memcpy(&traceHeader_,buffer,sizeof(traceHeader_));			//å°†åœ°éœ‡é“å¤´æ•°æ®240å­—èŠ‚å†™åˆ°traceHeaderä¸­å»
 	printf("inline: %d  CorssLine: %d\n",InLine,CrossLine);
 	printf("number of sample in filehead: %d ",sampleNum);
-	in_.close();
+	fclose(ff);
 }
 /*
-¶ÁÈ¡µÃµ½µ¥¸öÃæµÄµØÕğÊı¾İ
-µØÕğÊı¾İ¼ÇÂ¼·´Éä²¨µÄÕñ·ù´óĞ¡£¬°üº¬Õı¸ºÒÔ¼°0
-µØÕğÊı¾İPC-IEEEÀàĞÍ£ºÊıÖµÔÚ-10571Öµ10571Ö®¼ä£¨Ä³µ×²ãÊı¾İ£¬¿ÉÊÇ´ó¸Å¹À¼ÆÊı×Ö¶ÁÈ¡ÊÇ·ñÕıÈ·£©
-µØÕğÊı¾İIBM-IEEEÀàĞÍ£ºÊıÖµÔÚ-127ÖÁ127Ö®¼ä
-*/
-void segy::ReadOneTrace()
-{
-	Trace_ = (float**)malloc(sizeof(float)*CrossLine);									//ÉêÇëÁËtraceNum¸öµØÕğµÀ¿Õ¼ä
-	for (int i = 0; i < CrossLine; i++)
-	{
-		Trace_[i] = (float*)malloc(sizeof(float)*sampleNum);							//ÎªÃ¿Ò»¸öµØÕğµÀÉêÇë BFileHead_.NUM_OF_SAMPLES ¸ö²ÉÑùµãµÄ¿Õ¼ä
-	}
-	int iTrace = 0;
-	while(iTrace<CrossLine)
-	{
-																						//µØÕğµÀÊı¾İµÄ¶ÁÈ¡£º
-		fseek(ff,240,SEEK_CUR);														    //´Óµ±Ç°Î»ÖÃÍùºó¶ÁĞ´
-		if (toLitteEnd(BFileHead_.SAMPLE_FORMAT) == 5)									//PC IEEE ÀàĞÍ
-		{
-			char *buf(nullptr);
-			buf = new char[sampleNum*sizeof(float)];									// ÉêÇë±£´æÒ»µÀµÄÊı¾İ¿Õ¼ä
-			fread(buf,sampleNum*sizeof(float),1,ff);									// ½«Êı¾İ¶Áµ½bufÖĞ
-			char _char2int[4];
-			for (int index = 0;index<sampleNum;index++)
-			{
-				getBuf(buf, _char2int, index*4, 4);
-				memcpy(&Trace_[iTrace][index], _char2int, 4);
-			}
-			delete[]buf;
-		}
-		else if(toLitteEnd(BFileHead_.SAMPLE_FORMAT) == 1)								// IBM IEEEÀàĞÍ ĞèÒª×ª»»ÎªPC IEEE
-		{
-			uint8_t* buffer = new uint8_t[sampleNum*sizeof(float)];
-			fread(reinterpret_cast<char*>(buffer),sampleNum*sizeof(float),1,ff);		// ½«Êı¾İ¶Áµ½bufÖĞ
-			char _char2int[4];
-			for (size_t n = 0; n < sampleNum; n++)
-			{
-				uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(buffer + n*4));
-				Trace_[iTrace][n] = toIeee(ibmSample);
-			}
-		}
-		iTrace++;																		// ¿ØÖÆµÀÊı
-	}
-}
-/*
-¶ÁÈ¡ËùÓĞµÄµØÕğÊı¾İ
-VolumeTrace£ºÈıÎ¬Êı×é´æ´¢ËùÓĞµÄµØÕğÊı¾İ
-InLine==0±íÃ÷Îª¶şÎ¬Æ½ÃæÊı¾İ·ñÔòÎªÈıÎ¬Êı¾İ
+è¯»å–å¾—åˆ°å•ä¸ªé¢çš„åœ°éœ‡æ•°æ®
+åœ°éœ‡æ•°æ®è®°å½•åå°„æ³¢çš„æŒ¯å¹…å¤§å°ï¼ŒåŒ…å«æ­£è´Ÿä»¥åŠ0
+åœ°éœ‡æ•°æ®PC-IEEEç±»å‹ï¼šæ•°å€¼åœ¨-10571å€¼10571ä¹‹é—´ï¼ˆæŸåº•å±‚æ•°æ®ï¼Œå¯æ˜¯å¤§æ¦‚ä¼°è®¡æ•°å­—è¯»å–æ˜¯å¦æ­£ç¡®ï¼‰
+åœ°éœ‡æ•°æ®IBM-IEEEç±»å‹ï¼šæ•°å€¼åœ¨-127è‡³127ä¹‹é—´
 */
 void segy::ReadAllTrace()
 {
-	ff = fopen(filename_.c_str(),"rb");
-	if (ff==NULL)
-	{
-		printf("Error opening file %s \n",filename_.c_str());
-		exit(0);
-	}
-	fseek(ff,3600,SEEK_SET);												//´ÓÎÄ¼şÆğÊ¼Î»ÖÃ¿ªÊ¼
-	if (InLine!=0)															//ÌåÊı¾İ
-	{
-		VolumeTrace = (float***)malloc(sizeof(float)*CrossLine*InLine);
-		for (int i = 0; i < InLine; i++)
+	int iTrace = 0;																						//åœ°éœ‡é“æ•°æ®çš„è¯»å–ï¼š												
+	
+	if (toLitteEnd(BFileHead_.SAMPLE_FORMAT) == 5)									//PC IEEE ç±»å‹
 		{
-			ReadOneTrace();
-			VolumeTrace[i] = Trace_;
+			while (iTrace<CrossLine)
+			{
+				buffer += 240;                                                            //ä»å½“å‰ä½ç½®å¾€åè¯»å†™ 
+				char *buf(nullptr);
+				buf = new char[sampleNum*sizeof(float)];									// ç”³è¯·ä¿å­˜ä¸€é“çš„æ•°æ®ç©ºé—´
+				std::memcpy(buf,buffer,sampleNum*sizeof(float));                             // å°†æ•°æ®è¯»åˆ°bufä¸­
+				buffer += sampleNum*sizeof(float);
+				char _char2int[4];
+				for (int index = 0;index<sampleNum;index++)
+				{
+					float tempValue;
+					getBuf(buf, _char2int, index*4, 4);                                      // å°†å·¥ä½œç«™çš„å¤§ç«¯æ¨¡å¼å˜æˆPCç«¯çš„å°ç«¯æ¨¡å¼
+					memcpy(&tempValue, _char2int, 4);
+					intensity->push_back(tempValue);
+					if (maxValue<tempValue)
+					{
+						maxValue = tempValue;
+					}
+				}
+				delete[]buf;
+				iTrace++;
+			}
+			if (InLine != 0)
+			{
+				//å¦‚æœå¤šé¢ï¼Œè¯»å…¶ä»–çš„å‡ é¢
+				buffer -=((240+sampleNum*sizeof(float))*CrossLine+3600);  //å›åˆ°æ–‡ä»¶å¤´
+				buffer +=(fileLength-(240+sampleNum*sizeof(float))*CrossLine);
+				iTrace = 0;
+				while (iTrace<CrossLine)
+				{
+					buffer += 240;
+					char *buf(nullptr);
+					buf = new char[sampleNum*sizeof(float)];
+					std::memcpy(buf,buffer,sampleNum*sizeof(float));                             // å°†æ•°æ®è¯»åˆ°bufä¸­
+					buffer += sampleNum*sizeof(float);
+					char _char2int[4];
+					
+					//èƒŒé¢æ•°æ®
+					for (size_t n = 0; n < sampleNum; n++)
+					{
+						float tempValue;
+						getBuf(buf, _char2int, n*4, 4);                                      // å°†å·¥ä½œç«™çš„å¤§ç«¯æ¨¡å¼å˜æˆPCç«¯çš„å°ç«¯æ¨¡å¼
+						memcpy(&tempValue, _char2int, 4);
+						intensity->push_back(tempValue);  //å¾—åˆ°å¼ºåº¦
+						if (maxValue<tempValue)
+						{
+							maxValue = tempValue;
+						}
+					}
+					iTrace++;																	  // æ§åˆ¶é“æ•°
+				}	
+
+				//å³ä¾§é¢
+				buffer -=(fileLength-3600);  //å›åˆ°æ–‡ä»¶å¤´
+				buffer +=(240+sampleNum*sizeof(float))*(CrossLine-1);
+				int currentIndex = 0;
+				iTrace = 0;
+				while (iTrace<InLine)
+				{
+					currentIndex += 240;
+					char *buf(nullptr);
+					buf = new char[sampleNum*sizeof(float)];
+					std::memcpy(buf,&(buffer[currentIndex]),sampleNum*sizeof(float));                             // å°†æ•°æ®è¯»åˆ°bufä¸­			
+					char _char2int[4];
+					currentIndex+= sampleNum*sizeof(float);
+					for (size_t n = 0; n < sampleNum; n++)
+					{		
+						float tempValue;
+						getBuf(buf, _char2int, n*4, 4);                                      // å°†å·¥ä½œç«™çš„å¤§ç«¯æ¨¡å¼å˜æˆPCç«¯çš„å°ç«¯æ¨¡å¼
+						memcpy(&tempValue, _char2int, 4);
+						intensity->push_back(tempValue);  //å¾—åˆ°å¼ºåº¦
+						if (maxValue<tempValue)
+						{
+							maxValue = tempValue;
+						}
+					}			
+					iTrace++;																	  // æ§åˆ¶é“æ•°
+					currentIndex = (240+sampleNum*sizeof(float))*CrossLine*iTrace;
+				}
+
+				//å·¦ä¾§é¢
+				buffer -=(240+sampleNum*sizeof(float))*(CrossLine-1);  //å›åˆ°æ–‡ä»¶å¤´
+				currentIndex = 0;
+				iTrace = 0;
+				while (iTrace<InLine)
+				{
+					currentIndex += 240;
+					char *buf(nullptr);
+					buf = new char[sampleNum*sizeof(float)];
+					std::memcpy(buf,&(buffer[currentIndex]),sampleNum*sizeof(float));                             // å°†æ•°æ®è¯»åˆ°bufä¸­			
+					char _char2int[4];
+					currentIndex+= sampleNum*sizeof(float);
+					for (size_t n = 0; n < sampleNum; n++)
+					{		
+						float tempValue;
+						getBuf(buf, _char2int, n*4, 4);                                      // å°†å·¥ä½œç«™çš„å¤§ç«¯æ¨¡å¼å˜æˆPCç«¯çš„å°ç«¯æ¨¡å¼
+						memcpy(&tempValue, _char2int, 4);
+						intensity->push_back(tempValue);  //å¾—åˆ°å¼ºåº¦
+						if (maxValue<tempValue)
+						{
+							maxValue = tempValue;
+						}
+					}			
+					iTrace++;																	  // æ§åˆ¶é“æ•°
+					currentIndex = (240+sampleNum*sizeof(float))*CrossLine*iTrace;
+				}
+			}
+			else
+			{
+				buffer-=fileLength; //å•é¢bufferè¯»å®Œæ•°æ®åå›åˆ°é¦–éƒ¨
+			}
+			buffer-=3600;
 		}
-	}
-	else																	//ÃæÊı¾İ
-	{
-		ReadOneTrace();														//¶Áµ½µÄÊı¾İÔÚtrace_ÖĞ
-	}
-	fclose(ff);
+		else if(toLitteEnd(BFileHead_.SAMPLE_FORMAT) == 1)								// IBM IEEEç±»å‹ éœ€è¦è½¬æ¢ä¸ºPC IEEE
+		{
+			iTrace = 0;
+			while (iTrace<CrossLine)   //ä¸€æ¬¡å¾ªç¯è¯»ä¸€æ¡æµ‹çº¿æ•°æ®
+			{
+				buffer += 240;
+				uint8_t* ubuffer = new uint8_t[sampleNum*sizeof(float)];	
+				std::memcpy(reinterpret_cast<char*>(ubuffer),buffer,sampleNum*sizeof(float));// å°†æ•°æ®è¯»åˆ°bufä¸­
+				buffer += sampleNum*sizeof(float);
+				//å•é¢
+				for (size_t n = 0; n < sampleNum; n++)
+				{
+					uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(ubuffer + n*4));
+					float tempValue = toIeee(ibmSample);									// å¾—åˆ°æ•°æ®åç›´æ¥æ”¾å…¥intensityä¸­	
+					intensity->push_back(tempValue);  //å¾—åˆ°å¼ºåº¦
+					if (maxValue<tempValue)
+					{
+						maxValue = tempValue;
+					}
+				}
+				iTrace++;	
+			}
+			if(InLine!=0)
+			{  //å¦‚æœå¤šé¢ï¼Œè¯»å…¶ä»–çš„å‡ é¢
+				buffer -=((240+sampleNum*sizeof(float))*CrossLine+3600);  //å›åˆ°æ–‡ä»¶å¤´
+				buffer +=(fileLength-(240+sampleNum*sizeof(float))*CrossLine);
+				iTrace = 0;
+				while (iTrace<CrossLine)
+				{
+					buffer += 240;
+					uint8_t* ubuffer = new uint8_t[sampleNum*sizeof(float)];	
+					std::memcpy(reinterpret_cast<char*>(ubuffer),buffer,sampleNum*sizeof(float));// å°†æ•°æ®è¯»åˆ°bufä¸­
+					buffer += sampleNum*sizeof(float);
+					//èƒŒé¢æ•°æ®
+					for (size_t n = 0; n < sampleNum; n++)
+					{
+						uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(ubuffer + n*4));
+						float tempValue = toIeee(ibmSample);									// å¾—åˆ°æ•°æ®åç›´æ¥æ”¾å…¥intensityä¸­	
+						intensity->push_back(tempValue);  //å¾—åˆ°å¼ºåº¦
+						if (maxValue<tempValue)
+						{
+							maxValue = tempValue;
+						}
+					}
+					iTrace++;																	  // æ§åˆ¶é“æ•°
+				}	
+
+				//å³ä¾§é¢
+				buffer -=(fileLength-3600);  //å›åˆ°æ–‡ä»¶å¤´
+				buffer +=(240+sampleNum*sizeof(float))*(CrossLine-1);
+				int currentIndex = 0;
+				iTrace = 0;
+				while (iTrace<InLine)
+				{
+					currentIndex += 240;
+					uint8_t* ubuffer = new uint8_t[sampleNum*sizeof(float)];	
+					std::memcpy(reinterpret_cast<char*>(ubuffer),&(buffer[currentIndex]),sampleNum*sizeof(float));// å°†æ•°æ®è¯»åˆ°bufä¸­
+					currentIndex+= sampleNum*sizeof(float);
+					for (size_t n = 0; n < sampleNum; n++)
+					{		
+						uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(ubuffer+ n*4));
+						float tempValue = toIeee(ibmSample);									// å¾—åˆ°æ•°æ®åç›´æ¥æ”¾å…¥intensityä¸­	
+						intensity->push_back(tempValue);  //å¾—åˆ°å¼ºåº¦
+						if (maxValue<tempValue)
+						{
+							maxValue = tempValue;
+						}
+					}			
+					iTrace++;																	  // æ§åˆ¶é“æ•°
+					currentIndex = (240+sampleNum*sizeof(float))*CrossLine*iTrace;
+				}
+
+				//å·¦ä¾§é¢
+				buffer -=(240+sampleNum*sizeof(float))*(CrossLine-1);  //å›åˆ°æ–‡ä»¶å¤´
+				currentIndex = 0;
+				iTrace = 0;
+				while (iTrace<InLine)
+				{
+					currentIndex += 240;
+					uint8_t* ubuffer = new uint8_t[sampleNum*sizeof(float)];	
+					std::memcpy(reinterpret_cast<char*>(ubuffer),&(buffer[currentIndex]),sampleNum*sizeof(float));// å°†æ•°æ®è¯»åˆ°bufä¸­
+					currentIndex+= sampleNum*sizeof(float);
+					for (size_t n = 0; n < sampleNum; n++)
+					{		
+						uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(ubuffer+ n*4));
+						float tempValue = toIeee(ibmSample);									// å¾—åˆ°æ•°æ®åç›´æ¥æ”¾å…¥intensityä¸­	
+						intensity->push_back(tempValue);  //å¾—åˆ°å¼ºåº¦
+						if (maxValue<tempValue)
+						{
+							maxValue = tempValue;
+						}
+					}			
+					iTrace++;																	  // æ§åˆ¶é“æ•°
+					currentIndex = (240+sampleNum*sizeof(float))*CrossLine*iTrace;
+				}
+//				buffer-=3600;
+			}
+			else
+			{
+				buffer-=fileLength;
+			}
+//			delete[] buffer;  //å¯ä¸åˆ ï¼Œæ€»ä¹‹è¿™æ—¶å€™bufferæŒ‡å‘æ–‡ä»¶å¤´ä½ç½®
+			buffer -=3600; //ä½¿ç”¨å®Œbufferåéœ€è¦æŠŠbufferç½®ä½ç¬¬ä¸€é“é“é¦–ä½ç½®ï¼Œä»¥ä¾¿ä¸‹æ¬¡è¯»å–
+		}
 }
 
 void segy::PrintTraceHeader(){
@@ -541,9 +719,9 @@ void segy::PrintBinaryHeader(){
 void segy::PrintTextHeader(){
     for (size_t i = 0; i < 3200; i++)
 	{
-        if((i%80) == 0)										//80×Ö½ÚÒ»×é
+        if((i%80) == 0)										//80å­—èŠ‚ä¸€ç»„
             std::cout << std::endl;     
-	    std::cout << e2a[(int) (TFileHead_[i])];			//¶Á±í·¨
+	    std::cout << e2a[(int) (TFileHead_[i])];			//è¯»è¡¨æ³•
 	} 
     std::cout << std::endl;
 }
@@ -561,7 +739,7 @@ void segy::getBuf(const char* const src,
 }
 
 /*
-¹¤×÷Õ¾µÄ´ó¶ËÄ£Ê½±ä³ÉPCĞ¡¶ËÄ£Ê½
+å·¥ä½œç«™çš„å¤§ç«¯æ¨¡å¼å˜æˆPCå°ç«¯æ¨¡å¼
 */
 void segy::switchByte(char* const c,const int &len)  
 {
@@ -574,132 +752,276 @@ void segy::switchByte(char* const c,const int &len)
 	}
 }
 /*
-ÑÕÉ«Ó³Éäº¯Êı
-½«Êı¾İ±ê×¼»¯µ½0-1Ö®¼ä£¬È»ºóÔÚºì-°×-À¶ÈıÖÖÈıÖÖÑÕÉ«¼äÓ³Éä
+é¢œè‰²æ˜ å°„å‡½æ•°
+å°†æ•°æ®æ ‡å‡†åŒ–åˆ°0-1ä¹‹é—´ï¼Œç„¶ååœ¨çº¢-ç™½-è“ä¸‰ç§ä¸‰ç§é¢œè‰²é—´æ˜ å°„
 */
 void segy::colorMap()  
 {
-	auto it =intensity.begin();
+	auto it =intensity->begin();
 	float value;
-	for (it;it<intensity.end();it++)
+	for (it;it<intensity->end();it++)
 	{
-		if (*it>0)																	//À¶É«
+		if (*it>0)																	//è“è‰²
 		{
 			value = 1-*it/(float)maxValue;
 			color->push_back(osg::Vec4f(value,value,1.0f,1.0f)); 
 		}
-		else																		//ºìÉ«
+		else																		//çº¢è‰²
 		{
 			value = 1-(-*it)/(float)maxValue;
 			color->push_back(osg::Vec4f(1.0f,value,value,1.0f)); 
 		}
 	}
-	for (int i = 0; i < 8; i++)														//ÉÏÏÂÆ½Ãæ
+	for (int i = 0; i < 8; i++)														//ä¸Šä¸‹å¹³é¢
 	{
 		color->push_back(osg::Vec4f(1.0f,1.0f,1.0f,1.0f)); 
 	}
 	
 }
 /*
-ĞèÒª»æÖÆµÄÃæÊı¾İ¶ÁÈ¡
+éœ€è¦ç»˜åˆ¶çš„é¢æ•°æ®è¯»å–
 */
 void segy::readFaceData()
 {
-	if (InLine != 0)																//InLine!=0 ÌåÊı¾İ   InLine = 0 ÃæÊı¾İ
+	if (InLine != 0)																//InLine!=0 ä½“æ•°æ®   InLine = 0 é¢æ•°æ®
 	{
 		int flag = 0;
 		int index = 0;
 		float back = 0.0;
 		float fvalue;  
-		while(flag < 2)																// ÕıÃæÓë±³Ãæ¶¥µã¸³Öµ
+		while(flag < 2)																// æ­£é¢ä¸èƒŒé¢é¡¶ç‚¹èµ‹å€¼
 		{
 			flag++;		
 			for (int i = 0; i < traceNum; i++)
 			{
 				for (int j = 0; j < sampleNum; j++)
 				{
-					fvalue = VolumeTrace[index][i][j];								//µ±indexÎª0Ê±±íÊ¾ÕıÃæ indexÎªInLine-1Îª±³Ãæ
-					if (maxValue<=fvalue)
-					{
-						maxValue = fvalue;
-					}
-					data->push_back(osg::Vec3f(i/(float)traceNum,back,sampleNum/(float)traceNum - j/(float)traceNum));
-					intensity.push_back(fvalue);
+//													//å½“indexä¸º0æ—¶è¡¨ç¤ºæ­£é¢ indexä¸ºInLine-1ä¸ºèƒŒé¢
+					data->push_back(osg::Vec3f(i/(float)traceNum,back,(sampleNum-1)/(float)traceNum - j/(float)traceNum));
+		
 				}
 			}
-			index = InLine-1;														//×îºóÒ»²ã
-			back = InLine/(float)traceNum;
+			index = InLine-1;														//æœ€åä¸€å±‚
+			back = (InLine-1)/(float)traceNum;
 		}
 		flag = 0;
 		index = traceNum-1;
-		back = 1;
-		while (flag<2)																//×óÓÒ
+		back = (traceNum-1)/(float)traceNum;
+		while (flag<2)																//å³å·¦
 		{
 			flag++;
 			for (int i = 0; i < InLine; i++)
 			{
 				for (int j = 0; j < sampleNum; j++)
 				{     
-					fvalue = VolumeTrace[i][index][j];								//index = 0 ±íÊ¾×ó index = traceNum-1 ±íÊ¾ÓÒ
-					if (maxValue<=fvalue)
-					{
-						maxValue = fvalue;
-					}
-					data->push_back(osg::Vec3f(back,i/(float)traceNum,sampleNum/(float)traceNum-j/(float)traceNum));
-					intensity.push_back(fvalue);
+			//										//index = 0 è¡¨ç¤ºå·¦ index = traceNum-1 è¡¨ç¤ºå³
+					data->push_back(osg::Vec3f(back,i/(float)traceNum,(sampleNum-1)/(float)traceNum-j/(float)traceNum));
+					
 				}
 			}
 			index = 0; 
-			back = 0;
+			back = 0.0;
 		}
 		back = 0.0;
-		while (flag>0)															//ÉÏÏÂ¿Õ°×Æ½Ãæ
+		while (flag>0)															//ä¸Šä¸‹ç©ºç™½å¹³é¢
 		{
 			data->push_back(osg::Vec3f(0.0f,0.0f,back));
-			data->push_back(osg::Vec3f(0.0f,InLine/(float)traceNum,back));
-			data->push_back(osg::Vec3f(1.0f,InLine/(float)traceNum,back));
-			data->push_back(osg::Vec3f(1.0f,0.0f,back));
+			data->push_back(osg::Vec3f(0.0f,(InLine-1)/(float)traceNum,back));
+			data->push_back(osg::Vec3f((traceNum-1)/(float)traceNum,(InLine-1)/(float)traceNum,back));
+			data->push_back(osg::Vec3f((traceNum-1)/(float)traceNum,0.0f,back));
 			flag--;
-			back = sampleNum/(float)traceNum;
+			back = (sampleNum-1)/(float)traceNum;
+		}
+		for (int i = 0; i < 8; i++)
+		{
+			intensity->push_back(0.0);
 		}
 	}
-	else if(InLine == 0)														// ÃæÊı¾İ
+	else if(InLine == 0)														// é¢æ•°æ®
 	{
 		int fvalue = 0;
 		for (int i = 0; i < traceNum; i++)
 		{
 			for (int j = 0; j < sampleNum; j++)
 			{
-				fvalue = Trace_[i][j];
-				if (maxValue<=fvalue)
-				{
-					maxValue = fvalue;
-				}
 				data->push_back(osg::Vec3f(i/(float)traceNum,0,sampleNum/traceNum - j/(float)traceNum));
-				intensity.push_back(fvalue);
 			}
 		}
 	}
 	else
 	{
-		std::cout<<"Êı¾İ´íÎó¡£";
+		std::cout<<"æ•°æ®é”™è¯¯ã€‚";
 		exit(0);
 	}
 }
 
 /*
-ÉèÖÃ»æÖÆÍ¼Ôª
+è¯»å–ä¸€ä¸ªåˆ‡é¢æ•°æ®å¹¶æ˜¾ç¤ºï¼š
+typeNum:1-æ­£é¢ï¼Œ2-ä¾§é¢ï¼Œ3-ä¸Šé¢
+pos:åˆ‡é¢ä½ç½®
+
+æˆ‘ä»¬çº¦å®šï¼šä½¿ç”¨å®Œbufferåéœ€è¦å°†bufferç§»å›ç¬¬ä¸€é“é“å¤´ä½ç½®
+æ­¤ç¨‹åºæœ‰ä¸€ä¸ªé—®é¢˜ï¼Œç­‰åˆ°ä»¥åå®ç°ç³»ç»Ÿæ—¶ä¿®æ”¹ï¼š
+1.æ²¡æœ‰ä¸åˆ‡ç‰‡é…å¥—çš„é¡¶ç‚¹æ•°æ®ï¼Œæˆ‘çš„åšæ³•æ˜¯è°ƒç”¨ä¸€ä¸ªç»˜åˆ¶æ­£é¢çš„å‡½æ•°ï¼Œç„¶è€Œå´å°†InLineï¼ŒTraceNumï¼ŒSampleNumä¿®æ”¹äº†
+ä¸‹æ¬¡åŠ ä¸Šé…å¥—çš„ç®—æ³•
+*/
+void segy::ReadOneTrace(int typeNum,int pos)
+{
+	int iTrace = 0;
+	if (typeNum == 1)																//è¯»å–æ­£é¢ï¼Œå®½ï¼štraceNum é«˜ï¼šSampleNum
+	{
+		buffer+=(240+sampleNum*sizeof(float))*CrossLine*(pos-1);
+		while (iTrace<CrossLine)   //ä¸€æ¬¡å¾ªç¯è¯»ä¸€æ¡æµ‹çº¿æ•°æ®
+		{
+			buffer += 240;
+			uint8_t* ubuffer = new uint8_t[sampleNum*sizeof(float)];	
+			std::memcpy(reinterpret_cast<char*>(ubuffer),buffer,sampleNum*sizeof(float));// å°†æ•°æ®è¯»åˆ°bufä¸­
+			buffer += sampleNum*sizeof(float);
+			//å•é¢
+			for (size_t n = 0; n < sampleNum; n++)
+			{
+				uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(ubuffer + n*4));
+				float tempValue = toIeee(ibmSample);									// å¾—åˆ°æ•°æ®åç›´æ¥æ”¾å…¥intensityä¸­	
+				intensity->push_back(tempValue);  //å¾—åˆ°å¼ºåº¦
+				if (maxValue<tempValue)
+				{
+					maxValue = tempValue;
+				}
+			}
+			iTrace++;	
+		}
+		buffer-=(240+sampleNum*sizeof(float))*CrossLine*pos;
+		tempInLine = InLine;
+		InLine = 0;
+	}
+	else if(typeNum == 2)
+	{
+		//å·¦ä¾§é¢
+//		buffer -=(240+sampleNum*sizeof(float))*(CrossLine-1);  //å›åˆ°æ–‡ä»¶å¤´
+		int currentIndex = (240+sampleNum*sizeof(float))*(pos-1); //é“æ•°æ®ä¹˜ä»¥ä½ç½®
+		iTrace = 0;
+		while (iTrace<InLine)
+		{
+			currentIndex += 240;
+			uint8_t* ubuffer = new uint8_t[sampleNum*sizeof(float)];	
+			std::memcpy(reinterpret_cast<char*>(ubuffer),&(buffer[currentIndex]),sampleNum*sizeof(float));// å°†æ•°æ®è¯»åˆ°bufä¸­
+			currentIndex+= sampleNum*sizeof(float);
+			for (size_t n = 0; n < sampleNum; n++)
+			{		
+				uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(ubuffer+ n*4));
+				float tempValue = toIeee(ibmSample);									// å¾—åˆ°æ•°æ®åç›´æ¥æ”¾å…¥intensityä¸­	
+				intensity->push_back(tempValue);  //å¾—åˆ°å¼ºåº¦
+				if (maxValue<tempValue)
+				{
+					maxValue = tempValue;
+				}
+			}			
+			iTrace++;																	  // æ§åˆ¶é“æ•°
+			currentIndex = (240+sampleNum*sizeof(float))*CrossLine*iTrace+(240+sampleNum*sizeof(float))*(pos-1);
+		}
+		tempInLine = InLine;
+		InLine = 0;
+		traceNum = tempInLine;
+	}
+	else if(typeNum == 3)
+	{
+		//ä¸Šé¢
+		int currentIndex = 0; //é“æ•°æ®ä¹˜ä»¥ä½ç½®
+		iTrace = 0;
+		while (iTrace<InLine)
+		{
+			currentIndex += 240+(pos-1)*sizeof(float);
+			for (size_t n = 0; n < CrossLine; n++)
+			{		
+				uint8_t* ubuffer = new uint8_t[sizeof(float)];	
+				std::memcpy(reinterpret_cast<char*>(ubuffer),&(buffer[currentIndex]),sizeof(float));// å°†æ•°æ®è¯»åˆ°bufä¸­
+				currentIndex += 240+sampleNum*sizeof(float); //åŠ ä¸€é“
+				uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(ubuffer));
+				float tempValue = toIeee(ibmSample);									// å¾—åˆ°æ•°æ®åç›´æ¥æ”¾å…¥intensityä¸­	
+				intensity->push_back(tempValue);  //å¾—åˆ°å¼ºåº¦
+				if (maxValue<tempValue)
+				{
+					maxValue = tempValue;
+				}
+			}			
+			iTrace++;																	  // æ§åˆ¶é“æ•°
+			currentIndex = (240+sampleNum*sizeof(float))*CrossLine*iTrace+(pos-1)*sizeof(float);
+		}
+		tempInLine = InLine;
+		InLine = 0;
+		sampleNum = tempInLine;
+	}
+	else
+	{
+		cout<<"åˆ‡ç‰‡ç±»å‹é”™è¯¯ï¼";
+		exit(0);
+	}
+}
+
+/*
+è®¾ç½®ç»˜åˆ¶å›¾å…ƒ
 */
 void segy::setUnitGeom(osg::ref_ptr<osg::Geometry> geom)
 {
-	int time = traceNum-1;									//¿ØÖÆÑ­»·´ÎÊı
+	int time = traceNum;									//æ§åˆ¶å¾ªç¯æ¬¡æ•°
 	int span = 0;
 	int flag = 0;
+	int oddFlag = 0;
 	if (InLine != 0)
 	{
-		while (flag<4)										//0--Ç°Ãæ 1 ºóÃæ 2ÉÏÃæ 3ÏÂÃæ
+		while (flag<4)										//0--å‰é¢ 1 åé¢ 2ä¸Šé¢ 3ä¸‹é¢
 		{
-			for (int i = 0; i < time; i++)
+			osg::DrawElementsUInt* base = new osg::DrawElementsUInt(osg::PrimitiveSet::QUAD_STRIP,0);
+			if (time%2==0)  //å¶æ•°æœ€åä¸€è¡Œå•ç‹¬è¯»å–
+			{
+				time -= 1;
+				oddFlag = 1;
+			}
+			int pand = 0;
+			for (int i = 0; i < time/2; i++)
+			{
+				pand += sampleNum;
+				for (int i = 0+span; i < sampleNum+span; i++)
+				{
+					base->push_back(i+pand-sampleNum);
+					base->push_back(i+pand);
+				}
+				for (int i = sampleNum-1+span; i >= 0+span; i--)
+				{
+					base->push_back(i+pand);
+					base->push_back(i+pand+sampleNum);
+				}
+				pand += sampleNum;
+			}
+			if (oddFlag == 1)  //å¶æ•°
+			{
+				oddFlag = 0;
+				time += 1;
+				pand += sampleNum;
+				for (int i = 0+span; i < sampleNum+span; i++)
+				{
+					base->push_back(i+pand-sampleNum);
+					base->push_back(i+pand);
+				}
+			}
+			geom->addPrimitiveSet(base);  //å››ä¸ªé¢ç‰‡å››ä¸ªbase
+
+			if (++flag == 1)								//åé¢é¢ç‰‡æ•°æ®ä½ç½®ï¼ˆéœ€è¦è·³è¿‡çš„é•¿åº¦ï¼‰
+			{
+				span = traceNum*sampleNum;
+			}
+			else if(flag == 2)								//å·¦é¢
+			{
+				time = InLine;
+				span *= 2;
+			}
+			else if(flag == 3)								//å³é¢
+			{
+				span += InLine*sampleNum;
+			}
+
+
+		/*	for (int i = 0; i < time; i++)
 			{
 				int pand = sampleNum*i;
 				for (int j = pand+span; j < sampleNum-1+pand+span; j++)
@@ -712,21 +1034,21 @@ void segy::setUnitGeom(osg::ref_ptr<osg::Geometry> geom)
 					geom->addPrimitiveSet(base);
 				}
 			}
-			if (++flag == 1)								//ºóÃæÃæÆ¬Êı¾İÎ»ÖÃ£¨ĞèÒªÌø¹ıµÄ³¤¶È£©
+			if (++flag == 1)								//åé¢é¢ç‰‡æ•°æ®ä½ç½®ï¼ˆéœ€è¦è·³è¿‡çš„é•¿åº¦ï¼‰
 			{
 				span = traceNum*sampleNum;
 			}
-			else if(flag == 2)								//ÉÏÃæ
+			else if(flag == 2)								//ä¸Šé¢
 			{
 				time = InLine-1;
 				span *= 2;
 			}
-			else if(flag == 3)								//ÏÂÃæ
+			else if(flag == 3)								//ä¸‹é¢
 			{
 				span += InLine*sampleNum;
-			}
+			}*/
 		}
-		span += InLine*sampleNum;							//×óÓÒÆ½Ãæ
+		span += InLine*sampleNum;							//å·¦å³å¹³é¢
 		flag = 0;
 		while (flag<2)
 		{
@@ -741,7 +1063,42 @@ void segy::setUnitGeom(osg::ref_ptr<osg::Geometry> geom)
 	}
 	else if (InLine == 0)
 	{
-		for (int i = 0; i < time; i++)
+		osg::DrawElementsUInt* base = new osg::DrawElementsUInt(osg::PrimitiveSet::QUAD_STRIP,0);
+		int span = 0;
+		int travelTime = traceNum;
+		if (traceNum%2==0)  //å¶æ•°æœ€åä¸€è¡Œå•ç‹¬è¯»å–
+		{
+			travelTime -= 1;
+		}
+		for (int j = 0; j < travelTime/2; j++)
+		{
+			span += sampleNum;
+			for (int i = 0; i < sampleNum; i++)
+			{
+				base->push_back(i+span-sampleNum);
+				base->push_back(i+span);
+			}
+			for (int i = sampleNum-1; i >= 0; i--)
+			{
+				base->push_back(i+span);
+				base->push_back(i+span+sampleNum);
+			}
+			span += sampleNum;
+		}
+		if (traceNum%2==0)  //å¶æ•°
+		{
+			span += sampleNum;
+			for (int i = 0; i < sampleNum; i++)
+			{
+				base->push_back(i+span-sampleNum);
+				base->push_back(i+span);
+			}
+		}
+		geom->addPrimitiveSet(base);
+
+
+
+/*		for (int i = 0; i < time; i++)
 		{
 			int pand = sampleNum*i;
 			for (int j = pand; j < sampleNum-1+pand; j++)
@@ -753,14 +1110,14 @@ void segy::setUnitGeom(osg::ref_ptr<osg::Geometry> geom)
 				base->push_back(j+1);
 				geom->addPrimitiveSet(base);
 			}
-		}
+		}*/
 	}
 }
 
 void segy::drawAllTrace()
 {
-	readFaceData();											//ÌåÊı¾İ
-	colorMap();												//ÑÕÉ«Ó³Éä
+	readFaceData();											//ä½“æ•°æ®
+	colorMap();												//é¢œè‰²æ˜ å°„
 } 
 
 void segy::outputFile()
@@ -780,7 +1137,7 @@ void segy::outputFile()
 			{
 				if (out.is_open())   
 				{  
-					out << VolumeTrace[i][j][k];  
+//					out << VolumeTrace[i][j][k];  
 					out << "\t";    
 				}  
 			}
@@ -789,5 +1146,5 @@ void segy::outputFile()
 		out<<"\n";
 	}
 	out.close();
-	cout<<"Ğ´ÎÄ¼ş½áÊø";
+	cout<<"å†™æ–‡ä»¶ç»“æŸ";
 }
