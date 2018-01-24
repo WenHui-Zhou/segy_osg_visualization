@@ -316,6 +316,7 @@ toLitteEnd(BFileHead_.NUM_OF_SAMPLES)是指一个地震道中的样本点数，�
 */
 void segy::ReadTraceHeader(std::string fl)
 {
+
     filename_ = fl;	
 	ff = fopen(filename_.c_str(),"rb");       //读入文件
 	if (ff==NULL)
@@ -347,6 +348,8 @@ void segy::ReadTraceHeader(std::string fl)
 	std::memcpy(&BFileHead_,buffer,sizeof(BFileHead_));				//将二进制流的内容拷贝到BFileHead_中去
 	sampleNum = toLitteEnd(BFileHead_.NUM_OF_SAMPLES);				//采样点数
 	CrossLine = traceNum = toLitteEnd(BFileHead_.NUM_OF_TRACE);	
+
+
 	if (CrossLine==1||CrossLine==0)									//单片,当头文件中BFileHead_.NUM_OF_TRACE 为零时，代表他是二维的数据corssLine重新计算
 	{
 		InLine = 0;
@@ -355,6 +358,7 @@ void segy::ReadTraceHeader(std::string fl)
 	else															//三维数据 包含多个面
 	{	
 		InLine = (fileLength-3600)/(240+4*sampleNum)/CrossLine;		//地震道道数
+
 		if (InLine == 1)                                            //当InLine是1时，仅有一片数据，因此也是单片
 		{
 			InLine = 0; 
@@ -363,6 +367,7 @@ void segy::ReadTraceHeader(std::string fl)
 																	//读取地震道数据头数据（第一个地震道的道头信息）
 	buffer += sizeof(BFileHead_);
 	std::memcpy(&traceHeader_,buffer,sizeof(traceHeader_));			//将地震道头数据240字节写到traceHeader中去
+
 	printf("inline: %d  CorssLine: %d\n",InLine,CrossLine);
 	printf("number of sample in filehead: %d ",sampleNum);
 	fclose(ff);
@@ -816,7 +821,6 @@ void segy::readFaceData()
 				{     
 			//										//index = 0 表示左 index = traceNum-1 表示右
 					data->push_back(osg::Vec3f(back,i/(float)traceNum,(sampleNum-1)/(float)traceNum-j/(float)traceNum));
-					
 				}
 			}
 			index = 0; 
@@ -831,6 +835,10 @@ void segy::readFaceData()
 			data->push_back(osg::Vec3f((traceNum-1)/(float)traceNum,0.0f,back));
 			flag--;
 			back = (sampleNum-1)/(float)traceNum;
+		}
+		for (int i = 0; i < 8; i++)
+		{
+			intensity->push_back(0.0);
 		}
 		for (int i = 0; i < 8; i++)
 		{
@@ -963,6 +971,7 @@ void segy::ReadOneTrace(int typeNum,int pos)
 */
 void segy::setUnitGeom(osg::ref_ptr<osg::Geometry> geom)
 {
+
 	int time = traceNum;									//控制循环次数
 	int span = 0;
 	int flag = 0;

@@ -30,21 +30,11 @@ out vec4 pixColor;
 void main(void)
 {
 	gl_Position = ModelViewProjectionMatrix * Vertex;
+
 	float tmp = step(0,intense);
 	pixColor = vec4(1.0-intense/maxValue*tmp,1-intense/maxValue*(2*tmp-1),1.0-intense/maxValue*(tmp-1),1.0);
 }
 );
-
-//fragment shader中的解释说明
-
-//	if (intense>0)
-//	{
-//		pixColor = vec4(1.0-intense/maxValue, 1-intense/maxValue, 1.0,                1.0); //颜色在白色与蓝色间
-//	}
-//	else
-//	{
-//		pixColor = vec4(1.0,                  1+intense/maxValue, 1+intense/maxValue, 1.0); //颜色在白色与红色间
-//	}
 
 const char* fragSource1 = GLSL400(
 	in vec4 pixColor;
@@ -53,7 +43,6 @@ void main(void)
 	gl_FragColor = pixColor;
 }
 );
-
 
 struct ModelViewProjectionMatrixCallback:public osg::Uniform::Callback{
 	ModelViewProjectionMatrixCallback(osg::Camera* camera):_camera(camera){}
@@ -66,6 +55,7 @@ struct ModelViewProjectionMatrixCallback:public osg::Uniform::Callback{
 
 	osg::Camera* _camera;
 };
+
 
 
 osg::ref_ptr<osg::Node> cretateBoundingBox(osg::Node * node)
@@ -153,14 +143,19 @@ osg::ref_ptr<osg::Node> cretateBoundingBox(osg::Node * node)
 	return geode;
 }
 
+
 segy RunSegy()
 {
 	segy sgy;
 //	sgy.ReadTraceHeader("shot.segy");
+
 //	sgy.ReadTraceHeader("LineE.sgy");
 	sgy.ReadTraceHeader("pg_lm.segy");
 	sgy.ReadAllTrace();      //地震数据
 //	sgy.ReadOneTrace(1,150); //读切片数据
+	sgy.ReadTraceHeader("LineE.sgy");
+//	sgy.ReadTraceHeader("pg_lm.segy");
+	sgy.ReadAllTrace();
 //	sgy.PrintTextHeader();
 //	sgy.PrintBinaryHeader();
 //	printf(".........................\n");
@@ -206,11 +201,12 @@ int main( int argc, char** argv )
 	stateset->setMode(GL_BLEND, osg::StateAttribute::ON);
 	osg::ref_ptr<osg::Node> cowBoundingBox = cretateBoundingBox(geom);
 	root->addChild(cowBoundingBox);
-//	mt->addChild(cowBoundingBox);
 
 	root->addChild(geom.get());
+
 	osgUtil::Optimizer optimzer;
 	optimzer.optimize(root);
+	
 	viewer->setSceneData(root.get());
 	viewer->realize();
 	viewer->run();
