@@ -174,7 +174,7 @@ public:
     ~segy();
     void ReadAllTrace();												//读取所有的地震数据
 	void ReadTraceHeader(std::string fl);                               //读取前3200字段和400字段，读出inline,xline,以及sample of trace
-	void ReadOneTrace();								                //读取一个切面地震道数据
+	void ReadOneTrace(int typeNum,int pos);							    //读取一个切面地震道数据,typenum为切面类型，pos为位置
     void PrintTraceHeader();                                            //地震道道头数据240字节
     void PrintTextHeader();                                             //输出文件起始位置的3200字节
     void PrintBinaryHeader();                                           //输出二进制文件头400字节
@@ -184,26 +184,27 @@ public:
     void drawAllTrace();                                                //绘制面
 	void colorMap();                                                    //强度--颜色映射
 	void readFaceData();                                                //读出顶点数据
-	void setUnitGeom(osg::ref_ptr<osg::Geometry> geom);                 //设置图元单元
-    unsigned char TFileHead_ [3200];
+	void setUnitGeom(osg::ref_ptr<osg::Geometry> geom);                 //设置图元单元	
+	unsigned char TFileHead_ [3200];
     unsigned char ExTFileHead_ [3200];
     binaryFileHeader BFileHead_;
     traceHeader traceHeader_;
-    float **Trace_;														//二维的地震道矩阵
-	float ***VolumeTrace;												//三维地震数据，生成的数据 VolumeTrace[inline-1][reaceNum-1][sampleNum-1]
+//    float **Trace_;														//二维的地震道矩阵
+//	float ***VolumeTrace;												//三维地震数据，生成的数据 VolumeTrace[inline-1][traceNum-1][sampleNum-1]
 	int fileLength;														//文件长度
 	int traceNum;														// 地震道的道数   
 	int sampleNum;														//采样点数
 	int InLine;															//纵向上的数量
 	int CrossLine;														//地震道数，横向上的数量，等于traceNum
 	float maxValue;														//最大的地震强度值，用于标准化地震强度（颜色映射）
-//	std::vector<float> intensity;										//用于存放地震强度数据（存放需要绘制的点数据）
-	osg::ref_ptr<osg::FloatArray> intensity;
+	char* buffer;                                                       // 存放文件内容
+	osg::ref_ptr<osg::FloatArray> intensity;							//用于存放地震强度数据（存放需要绘制的点数据）
 	FILE *ff;															//SEGY文件指针
+	int tempInLine;                                                     //用于暂存InLine数据
 	void outputFile();													//导出文件
     std::string filename_;
-	osg::ref_ptr<osg::Vec3Array> data;
-	osg::ref_ptr<osg::Vec4Array> color;
+	osg::ref_ptr<osg::Vec3Array> data;                                  //顶点数据
+	osg::ref_ptr<osg::Vec4Array> color;                                 //颜色数据
 private:
     int toLitteEnd(int);
     unsigned int toLitteEnd(unsigned int);
@@ -217,6 +218,7 @@ segy::segy(){
 	color = new osg::Vec4Array;
 	intensity = new osg::FloatArray;
 	maxValue = 0.0;
+	tempInLine = 0;
 }
 
 segy::~segy(){
@@ -314,24 +316,40 @@ toLitteEnd(BFileHead_.NUM_OF_SAMPLES)是指一个地震道中的样本点数，�
 */
 void segy::ReadTraceHeader(std::string fl)
 {
-	char temp [4000];  
-    filename_ = fl;
-	std::fstream in_;
-    in_.open(filename_.c_str(),std::ifstream::in);					//读入文件
-    if(in_.fail()) 
-    {
-        printf("Error opening file %s \n",filename_.c_str());
-        exit(0);
-    }
-	in_.seekg (0, in_.end);											//将指针移动到文件末尾
-	fileLength = in_.tellg();										//得到文件的长度
-	in_.seekg(0,in_.beg);											//重新将指针移动到文件头
-    memset( TFileHead_, '\0', sizeof(char) * 3200 );				//内存初始化，全初始化为0
-    in_.read((char *)TFileHead_, sizeof(TFileHead_));				//将前3200字节写入TFileHead中
-    in_.read(temp, sizeof(BFileHead_));								//向temp中写入二进制流即400字节的内容
-    std::memcpy(&BFileHead_,temp,sizeof(BFileHead_));				//将二进制流的内容拷贝到BFileHead_中去
+
+    filename_ = fl;	
+	ff = fopen(filename_.c_str(),"rb");       //读入文件
+	if (ff==NULL)
+	{
+		cout<<"read data error";
+		exit(1);
+	}
+	//获取文件大小
+	fseek(ff,0,SEEK_END);                     //将指针移动到文件末尾
+	fileLength = ftell(ff);                   //得到文件的长度
+	rewind(ff);									//重新将指针移动到文件头
+	int result;
+	
+	buffer = (char*) malloc(sizeof(char)*fileLength);
+	if (buffer==NULL)
+	{
+		cout<<"cant malloc";
+		exit(0);
+	}
+	result = fread(buffer,1,fileLength,ff);
+	if (result!=fileLength)
+	{
+		cout<<"fread wrong";
+		exit(0);
+	}
+	memset( TFileHead_, '\0', sizeof(char) * 3200 );				//内存初始化，全初始化为0
+	strncpy((char *)TFileHead_,buffer, sizeof(TFileHead_));			//将前3200字节写入TFileHead中
+	buffer += sizeof(TFileHead_);
+	std::memcpy(&BFileHead_,buffer,sizeof(BFileHead_));				//将二进制流的内容拷贝到BFileHead_中去
 	sampleNum = toLitteEnd(BFileHead_.NUM_OF_SAMPLES);				//采样点数
-	CrossLine = traceNum = toLitteEnd(BFileHead_.NUM_OF_TRACE);		// CrossLine的值
+	CrossLine = traceNum = toLitteEnd(BFileHead_.NUM_OF_TRACE);	
+
+
 	if (CrossLine==1||CrossLine==0)									//单片,当头文件中BFileHead_.NUM_OF_TRACE 为零时，代表他是二维的数据corssLine重新计算
 	{
 		InLine = 0;
@@ -340,12 +358,19 @@ void segy::ReadTraceHeader(std::string fl)
 	else															//三维数据 包含多个面
 	{	
 		InLine = (fileLength-3600)/(240+4*sampleNum)/CrossLine;		//地震道道数
+
+		if (InLine == 1)                                            //当InLine是1时，仅有一片数据，因此也是单片
+		{
+			InLine = 0; 
+		}
 	}
-	in_.read(temp, sizeof(traceHeader_));							//读取地震道数据头数据（第一个地震道的道头信息）
-	std::memcpy(&traceHeader_,temp,sizeof(traceHeader_));			//将地震道头数据240字节写到traceHeader中去
+																	//读取地震道数据头数据（第一个地震道的道头信息）
+	buffer += sizeof(BFileHead_);
+	std::memcpy(&traceHeader_,buffer,sizeof(traceHeader_));			//将地震道头数据240字节写到traceHeader中去
+
 	printf("inline: %d  CorssLine: %d\n",InLine,CrossLine);
 	printf("number of sample in filehead: %d ",sampleNum);
-	in_.close();
+	fclose(ff);
 }
 /*
 读取得到单个面的地震数据
@@ -353,72 +378,229 @@ void segy::ReadTraceHeader(std::string fl)
 地震数据PC-IEEE类型：数值在-10571值10571之间（某底层数据，可是大概估计数字读取是否正确）
 地震数据IBM-IEEE类型：数值在-127至127之间
 */
-void segy::ReadOneTrace()
+void segy::ReadAllTrace()
 {
-	Trace_ = (float**)malloc(sizeof(float)*CrossLine);									//申请了traceNum个地震道空间
-	for (int i = 0; i < CrossLine; i++)
-	{
-		Trace_[i] = (float*)malloc(sizeof(float)*sampleNum);							//为每一个地震道申请 BFileHead_.NUM_OF_SAMPLES 个采样点的空间
-	}
-	int iTrace = 0;
-	while(iTrace<CrossLine)
-	{
-																						//地震道数据的读取：
-		fseek(ff,240,SEEK_CUR);														    //从当前位置往后读写
-		if (toLitteEnd(BFileHead_.SAMPLE_FORMAT) == 5)									//PC IEEE 类型
+	int iTrace = 0;																						//地震道数据的读取：												
+	
+	if (toLitteEnd(BFileHead_.SAMPLE_FORMAT) == 5)									//PC IEEE 类型
 		{
-			char *buf(nullptr);
-			buf = new char[sampleNum*sizeof(float)];									// 申请保存一道的数据空间
-			fread(buf,sampleNum*sizeof(float),1,ff);									// 将数据读到buf中
-			char _char2int[4];
-			for (int index = 0;index<sampleNum;index++)
+			while (iTrace<CrossLine)
 			{
-				getBuf(buf, _char2int, index*4, 4);
-				memcpy(&Trace_[iTrace][index], _char2int, 4);
+				buffer += 240;                                                            //从当前位置往后读写 
+				char *buf(nullptr);
+				buf = new char[sampleNum*sizeof(float)];									// 申请保存一道的数据空间
+				std::memcpy(buf,buffer,sampleNum*sizeof(float));                             // 将数据读到buf中
+				buffer += sampleNum*sizeof(float);
+				char _char2int[4];
+				for (int index = 0;index<sampleNum;index++)
+				{
+					float tempValue;
+					getBuf(buf, _char2int, index*4, 4);                                      // 将工作站的大端模式变成PC端的小端模式
+					memcpy(&tempValue, _char2int, 4);
+					intensity->push_back(tempValue);
+					if (maxValue<tempValue)
+					{
+						maxValue = tempValue;
+					}
+				}
+				delete[]buf;
+				iTrace++;
 			}
-			delete[]buf;
+			if (InLine != 0)
+			{
+				//如果多面，读其他的几面
+				buffer -=((240+sampleNum*sizeof(float))*CrossLine+3600);  //回到文件头
+				buffer +=(fileLength-(240+sampleNum*sizeof(float))*CrossLine);
+				iTrace = 0;
+				while (iTrace<CrossLine)
+				{
+					buffer += 240;
+					char *buf(nullptr);
+					buf = new char[sampleNum*sizeof(float)];
+					std::memcpy(buf,buffer,sampleNum*sizeof(float));                             // 将数据读到buf中
+					buffer += sampleNum*sizeof(float);
+					char _char2int[4];
+					
+					//背面数据
+					for (size_t n = 0; n < sampleNum; n++)
+					{
+						float tempValue;
+						getBuf(buf, _char2int, n*4, 4);                                      // 将工作站的大端模式变成PC端的小端模式
+						memcpy(&tempValue, _char2int, 4);
+						intensity->push_back(tempValue);  //得到强度
+						if (maxValue<tempValue)
+						{
+							maxValue = tempValue;
+						}
+					}
+					iTrace++;																	  // 控制道数
+				}	
+
+				//右侧面
+				buffer -=(fileLength-3600);  //回到文件头
+				buffer +=(240+sampleNum*sizeof(float))*(CrossLine-1);
+				int currentIndex = 0;
+				iTrace = 0;
+				while (iTrace<InLine)
+				{
+					currentIndex += 240;
+					char *buf(nullptr);
+					buf = new char[sampleNum*sizeof(float)];
+					std::memcpy(buf,&(buffer[currentIndex]),sampleNum*sizeof(float));                             // 将数据读到buf中			
+					char _char2int[4];
+					currentIndex+= sampleNum*sizeof(float);
+					for (size_t n = 0; n < sampleNum; n++)
+					{		
+						float tempValue;
+						getBuf(buf, _char2int, n*4, 4);                                      // 将工作站的大端模式变成PC端的小端模式
+						memcpy(&tempValue, _char2int, 4);
+						intensity->push_back(tempValue);  //得到强度
+						if (maxValue<tempValue)
+						{
+							maxValue = tempValue;
+						}
+					}			
+					iTrace++;																	  // 控制道数
+					currentIndex = (240+sampleNum*sizeof(float))*CrossLine*iTrace;
+				}
+
+				//左侧面
+				buffer -=(240+sampleNum*sizeof(float))*(CrossLine-1);  //回到文件头
+				currentIndex = 0;
+				iTrace = 0;
+				while (iTrace<InLine)
+				{
+					currentIndex += 240;
+					char *buf(nullptr);
+					buf = new char[sampleNum*sizeof(float)];
+					std::memcpy(buf,&(buffer[currentIndex]),sampleNum*sizeof(float));                             // 将数据读到buf中			
+					char _char2int[4];
+					currentIndex+= sampleNum*sizeof(float);
+					for (size_t n = 0; n < sampleNum; n++)
+					{		
+						float tempValue;
+						getBuf(buf, _char2int, n*4, 4);                                      // 将工作站的大端模式变成PC端的小端模式
+						memcpy(&tempValue, _char2int, 4);
+						intensity->push_back(tempValue);  //得到强度
+						if (maxValue<tempValue)
+						{
+							maxValue = tempValue;
+						}
+					}			
+					iTrace++;																	  // 控制道数
+					currentIndex = (240+sampleNum*sizeof(float))*CrossLine*iTrace;
+				}
+			}
+			else
+			{
+				buffer-=fileLength; //单面buffer读完数据后回到首部
+			}
+			buffer-=3600;
 		}
 		else if(toLitteEnd(BFileHead_.SAMPLE_FORMAT) == 1)								// IBM IEEE类型 需要转换为PC IEEE
 		{
-			uint8_t* buffer = new uint8_t[sampleNum*sizeof(float)];
-			fread(reinterpret_cast<char*>(buffer),sampleNum*sizeof(float),1,ff);		// 将数据读到buf中
-			for (size_t n = 0; n < sampleNum; n++)
+			iTrace = 0;
+			while (iTrace<CrossLine)   //一次循环读一条测线数据
 			{
-				uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(buffer + n*4));
-				Trace_[iTrace][n] = toIeee(ibmSample);
+				buffer += 240;
+				uint8_t* ubuffer = new uint8_t[sampleNum*sizeof(float)];	
+				std::memcpy(reinterpret_cast<char*>(ubuffer),buffer,sampleNum*sizeof(float));// 将数据读到buf中
+				buffer += sampleNum*sizeof(float);
+				//单面
+				for (size_t n = 0; n < sampleNum; n++)
+				{
+					uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(ubuffer + n*4));
+					float tempValue = toIeee(ibmSample);									// 得到数据后直接放入intensity中	
+					intensity->push_back(tempValue);  //得到强度
+					if (maxValue<tempValue)
+					{
+						maxValue = tempValue;
+					}
+				}
+				iTrace++;	
 			}
+			if(InLine!=0)
+			{  //如果多面，读其他的几面
+				buffer -=((240+sampleNum*sizeof(float))*CrossLine+3600);  //回到文件头
+				buffer +=(fileLength-(240+sampleNum*sizeof(float))*CrossLine);
+				iTrace = 0;
+				while (iTrace<CrossLine)
+				{
+					buffer += 240;
+					uint8_t* ubuffer = new uint8_t[sampleNum*sizeof(float)];	
+					std::memcpy(reinterpret_cast<char*>(ubuffer),buffer,sampleNum*sizeof(float));// 将数据读到buf中
+					buffer += sampleNum*sizeof(float);
+					//背面数据
+					for (size_t n = 0; n < sampleNum; n++)
+					{
+						uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(ubuffer + n*4));
+						float tempValue = toIeee(ibmSample);									// 得到数据后直接放入intensity中	
+						intensity->push_back(tempValue);  //得到强度
+						if (maxValue<tempValue)
+						{
+							maxValue = tempValue;
+						}
+					}
+					iTrace++;																	  // 控制道数
+				}	
+
+				//右侧面
+				buffer -=(fileLength-3600);  //回到文件头
+				buffer +=(240+sampleNum*sizeof(float))*(CrossLine-1);
+				int currentIndex = 0;
+				iTrace = 0;
+				while (iTrace<InLine)
+				{
+					currentIndex += 240;
+					uint8_t* ubuffer = new uint8_t[sampleNum*sizeof(float)];	
+					std::memcpy(reinterpret_cast<char*>(ubuffer),&(buffer[currentIndex]),sampleNum*sizeof(float));// 将数据读到buf中
+					currentIndex+= sampleNum*sizeof(float);
+					for (size_t n = 0; n < sampleNum; n++)
+					{		
+						uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(ubuffer+ n*4));
+						float tempValue = toIeee(ibmSample);									// 得到数据后直接放入intensity中	
+						intensity->push_back(tempValue);  //得到强度
+						if (maxValue<tempValue)
+						{
+							maxValue = tempValue;
+						}
+					}			
+					iTrace++;																	  // 控制道数
+					currentIndex = (240+sampleNum*sizeof(float))*CrossLine*iTrace;
+				}
+
+				//左侧面
+				buffer -=(240+sampleNum*sizeof(float))*(CrossLine-1);  //回到文件头
+				currentIndex = 0;
+				iTrace = 0;
+				while (iTrace<InLine)
+				{
+					currentIndex += 240;
+					uint8_t* ubuffer = new uint8_t[sampleNum*sizeof(float)];	
+					std::memcpy(reinterpret_cast<char*>(ubuffer),&(buffer[currentIndex]),sampleNum*sizeof(float));// 将数据读到buf中
+					currentIndex+= sampleNum*sizeof(float);
+					for (size_t n = 0; n < sampleNum; n++)
+					{		
+						uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(ubuffer+ n*4));
+						float tempValue = toIeee(ibmSample);									// 得到数据后直接放入intensity中	
+						intensity->push_back(tempValue);  //得到强度
+						if (maxValue<tempValue)
+						{
+							maxValue = tempValue;
+						}
+					}			
+					iTrace++;																	  // 控制道数
+					currentIndex = (240+sampleNum*sizeof(float))*CrossLine*iTrace;
+				}
+//				buffer-=3600;
+			}
+			else
+			{
+				buffer-=fileLength;
+			}
+//			delete[] buffer;  //可不删，总之这时候buffer指向文件头位置
+			buffer -=3600; //使用完buffer后需要把buffer置位第一道道首位置，以便下次读取
 		}
-		iTrace++;																		// 控制道数
-	}
-}
-/*
-读取所有的地震数据
-VolumeTrace：三维数组存储所有的地震数据
-InLine==0表明为二维平面数据否则为三维数据
-*/
-void segy::ReadAllTrace()
-{
-	ff = fopen(filename_.c_str(),"rb");
-	if (ff==NULL)
-	{
-		printf("Error opening file %s \n",filename_.c_str());
-		exit(0);
-	}
-	fseek(ff,3600,SEEK_SET);												//从文件起始位置开始
-	if (InLine!=0)															//体数据
-	{
-		VolumeTrace = (float***)malloc(sizeof(float)*CrossLine*InLine);
-		for (int i = 0; i < InLine; i++)
-		{
-			ReadOneTrace();
-			VolumeTrace[i] = Trace_;
-		}
-	}
-	else																	//面数据
-	{
-		ReadOneTrace();														//读到的数据在trace_中
-	}
-	fclose(ff);
 }
 
 void segy::PrintTraceHeader(){
@@ -619,49 +801,44 @@ void segy::readFaceData()
 			{
 				for (int j = 0; j < sampleNum; j++)
 				{
-					fvalue = VolumeTrace[index][i][j];								//当index为0时表示正面 index为InLine-1为背面
-					if (maxValue<=fvalue)
-					{
-						maxValue = fvalue;
-					}
-					data->push_back(osg::Vec3f(i/(float)traceNum,back,sampleNum/(float)traceNum - j/(float)traceNum));
-					intensity->push_back(fvalue);
+//													//当index为0时表示正面 index为InLine-1为背面
+					data->push_back(osg::Vec3f(i/(float)traceNum,back,(sampleNum-1)/(float)traceNum - j/(float)traceNum));
+		
 				}
 			}
 			index = InLine-1;														//最后一层
-			back = InLine/(float)traceNum;
+			back = (InLine-1)/(float)traceNum;
 		}
 		flag = 0;
 		index = traceNum-1;
-		back = 1;
-		while (flag<2)																//左右
+		back = (traceNum-1)/(float)traceNum;
+		while (flag<2)																//右左
 		{
 			flag++;
 			for (int i = 0; i < InLine; i++)
 			{
 				for (int j = 0; j < sampleNum; j++)
 				{     
-					fvalue = VolumeTrace[i][index][j];								//index = 0 表示左 index = traceNum-1 表示右
-					if (maxValue<=fvalue)
-					{
-						maxValue = fvalue;
-					}
-					data->push_back(osg::Vec3f(back,i/(float)traceNum,sampleNum/(float)traceNum-j/(float)traceNum));
-					intensity->push_back(fvalue);
+			//										//index = 0 表示左 index = traceNum-1 表示右
+					data->push_back(osg::Vec3f(back,i/(float)traceNum,(sampleNum-1)/(float)traceNum-j/(float)traceNum));
 				}
 			}
 			index = 0; 
-			back = 0;
+			back = 0.0;
 		}
 		back = 0.0;
 		while (flag>0)															//上下空白平面
 		{
 			data->push_back(osg::Vec3f(0.0f,0.0f,back));
-			data->push_back(osg::Vec3f(0.0f,InLine/(float)traceNum,back));
-			data->push_back(osg::Vec3f(1.0f,InLine/(float)traceNum,back));
-			data->push_back(osg::Vec3f(1.0f,0.0f,back));
+			data->push_back(osg::Vec3f(0.0f,(InLine-1)/(float)traceNum,back));
+			data->push_back(osg::Vec3f((traceNum-1)/(float)traceNum,(InLine-1)/(float)traceNum,back));
+			data->push_back(osg::Vec3f((traceNum-1)/(float)traceNum,0.0f,back));
 			flag--;
-			back = sampleNum/(float)traceNum;
+			back = (sampleNum-1)/(float)traceNum;
+		}
+		for (int i = 0; i < 8; i++)
+		{
+			intensity->push_back(0.0);
 		}
 		for (int i = 0; i < 8; i++)
 		{
@@ -675,13 +852,7 @@ void segy::readFaceData()
 		{
 			for (int j = 0; j < sampleNum; j++)
 			{
-				fvalue = Trace_[i][j];
-				if (maxValue<=fvalue)
-				{
-					maxValue = fvalue;
-				}
 				data->push_back(osg::Vec3f(i/(float)traceNum,0,sampleNum/traceNum - j/(float)traceNum));
-				intensity->push_back(fvalue);
 			}
 		}
 	}
@@ -693,18 +864,173 @@ void segy::readFaceData()
 }
 
 /*
+读取一个切面数据并显示：
+typeNum:1-正面，2-侧面，3-上面
+pos:切面位置
+
+我们约定：使用完buffer后需要将buffer移回第一道道头位置
+此程序有一个问题，等到以后实现系统时修改：
+1.没有与切片配套的顶点数据，我的做法是调用一个绘制正面的函数，然而却将InLine，TraceNum，SampleNum修改了
+下次加上配套的算法
+*/
+void segy::ReadOneTrace(int typeNum,int pos)
+{
+	int iTrace = 0;
+	if (typeNum == 1)																//读取正面，宽：traceNum 高：SampleNum
+	{
+		buffer+=(240+sampleNum*sizeof(float))*CrossLine*(pos-1);
+		while (iTrace<CrossLine)   //一次循环读一条测线数据
+		{
+			buffer += 240;
+			uint8_t* ubuffer = new uint8_t[sampleNum*sizeof(float)];	
+			std::memcpy(reinterpret_cast<char*>(ubuffer),buffer,sampleNum*sizeof(float));// 将数据读到buf中
+			buffer += sampleNum*sizeof(float);
+			//单面
+			for (size_t n = 0; n < sampleNum; n++)
+			{
+				uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(ubuffer + n*4));
+				float tempValue = toIeee(ibmSample);									// 得到数据后直接放入intensity中	
+				intensity->push_back(tempValue);  //得到强度
+				if (maxValue<tempValue)
+				{
+					maxValue = tempValue;
+				}
+			}
+			iTrace++;	
+		}
+		buffer-=(240+sampleNum*sizeof(float))*CrossLine*pos;
+		tempInLine = InLine;
+		InLine = 0;
+	}
+	else if(typeNum == 2)
+	{
+		//左侧面
+//		buffer -=(240+sampleNum*sizeof(float))*(CrossLine-1);  //回到文件头
+		int currentIndex = (240+sampleNum*sizeof(float))*(pos-1); //道数据乘以位置
+		iTrace = 0;
+		while (iTrace<InLine)
+		{
+			currentIndex += 240;
+			uint8_t* ubuffer = new uint8_t[sampleNum*sizeof(float)];	
+			std::memcpy(reinterpret_cast<char*>(ubuffer),&(buffer[currentIndex]),sampleNum*sizeof(float));// 将数据读到buf中
+			currentIndex+= sampleNum*sizeof(float);
+			for (size_t n = 0; n < sampleNum; n++)
+			{		
+				uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(ubuffer+ n*4));
+				float tempValue = toIeee(ibmSample);									// 得到数据后直接放入intensity中	
+				intensity->push_back(tempValue);  //得到强度
+				if (maxValue<tempValue)
+				{
+					maxValue = tempValue;
+				}
+			}			
+			iTrace++;																	  // 控制道数
+			currentIndex = (240+sampleNum*sizeof(float))*CrossLine*iTrace+(240+sampleNum*sizeof(float))*(pos-1);
+		}
+		tempInLine = InLine;
+		InLine = 0;
+		traceNum = tempInLine;
+	}
+	else if(typeNum == 3)
+	{
+		//上面
+		int currentIndex = 0; //道数据乘以位置
+		iTrace = 0;
+		while (iTrace<InLine)
+		{
+			currentIndex += 240+(pos-1)*sizeof(float);
+			for (size_t n = 0; n < CrossLine; n++)
+			{		
+				uint8_t* ubuffer = new uint8_t[sizeof(float)];	
+				std::memcpy(reinterpret_cast<char*>(ubuffer),&(buffer[currentIndex]),sizeof(float));// 将数据读到buf中
+				currentIndex += 240+sampleNum*sizeof(float); //加一道
+				uint32_t ibmSample = *(reinterpret_cast<uint32_t*>(ubuffer));
+				float tempValue = toIeee(ibmSample);									// 得到数据后直接放入intensity中	
+				intensity->push_back(tempValue);  //得到强度
+				if (maxValue<tempValue)
+				{
+					maxValue = tempValue;
+				}
+			}			
+			iTrace++;																	  // 控制道数
+			currentIndex = (240+sampleNum*sizeof(float))*CrossLine*iTrace+(pos-1)*sizeof(float);
+		}
+		tempInLine = InLine;
+		InLine = 0;
+		sampleNum = tempInLine;
+	}
+	else
+	{
+		cout<<"切片类型错误！";
+		exit(0);
+	}
+}
+
+/*
 设置绘制图元
 */
 void segy::setUnitGeom(osg::ref_ptr<osg::Geometry> geom)
 {
-	int time = traceNum-1;									//控制循环次数
+
+	int time = traceNum;									//控制循环次数
 	int span = 0;
 	int flag = 0;
+	int oddFlag = 0;
 	if (InLine != 0)
 	{
 		while (flag<4)										//0--前面 1 后面 2上面 3下面
 		{
-			for (int i = 0; i < time; i++)
+			osg::DrawElementsUInt* base = new osg::DrawElementsUInt(osg::PrimitiveSet::QUAD_STRIP,0);
+			if (time%2==0)  //偶数最后一行单独读取
+			{
+				time -= 1;
+				oddFlag = 1;
+			}
+			int pand = 0;
+			for (int i = 0; i < time/2; i++)
+			{
+				pand += sampleNum;
+				for (int i = 0+span; i < sampleNum+span; i++)
+				{
+					base->push_back(i+pand-sampleNum);
+					base->push_back(i+pand);
+				}
+				for (int i = sampleNum-1+span; i >= 0+span; i--)
+				{
+					base->push_back(i+pand);
+					base->push_back(i+pand+sampleNum);
+				}
+				pand += sampleNum;
+			}
+			if (oddFlag == 1)  //偶数
+			{
+				oddFlag = 0;
+				time += 1;
+				pand += sampleNum;
+				for (int i = 0+span; i < sampleNum+span; i++)
+				{
+					base->push_back(i+pand-sampleNum);
+					base->push_back(i+pand);
+				}
+			}
+			geom->addPrimitiveSet(base);  //四个面片四个base
+
+			if (++flag == 1)								//后面面片数据位置（需要跳过的长度）
+			{
+				span = traceNum*sampleNum;
+			}
+			else if(flag == 2)								//左面
+			{
+				time = InLine;
+				span *= 2;
+			}
+			else if(flag == 3)								//右面
+			{
+				span += InLine*sampleNum;
+			}
+
+
+		/*	for (int i = 0; i < time; i++)
 			{
 				int pand = sampleNum*i;
 				for (int j = pand+span; j < sampleNum-1+pand+span; j++)
@@ -729,7 +1055,7 @@ void segy::setUnitGeom(osg::ref_ptr<osg::Geometry> geom)
 			else if(flag == 3)								//下面
 			{
 				span += InLine*sampleNum;
-			}
+			}*/
 		}
 		span += InLine*sampleNum;							//左右平面
 		flag = 0;
@@ -746,7 +1072,42 @@ void segy::setUnitGeom(osg::ref_ptr<osg::Geometry> geom)
 	}
 	else if (InLine == 0)
 	{
-		for (int i = 0; i < time; i++)
+		osg::DrawElementsUInt* base = new osg::DrawElementsUInt(osg::PrimitiveSet::QUAD_STRIP,0);
+		int span = 0;
+		int travelTime = traceNum;
+		if (traceNum%2==0)  //偶数最后一行单独读取
+		{
+			travelTime -= 1;
+		}
+		for (int j = 0; j < travelTime/2; j++)
+		{
+			span += sampleNum;
+			for (int i = 0; i < sampleNum; i++)
+			{
+				base->push_back(i+span-sampleNum);
+				base->push_back(i+span);
+			}
+			for (int i = sampleNum-1; i >= 0; i--)
+			{
+				base->push_back(i+span);
+				base->push_back(i+span+sampleNum);
+			}
+			span += sampleNum;
+		}
+		if (traceNum%2==0)  //偶数
+		{
+			span += sampleNum;
+			for (int i = 0; i < sampleNum; i++)
+			{
+				base->push_back(i+span-sampleNum);
+				base->push_back(i+span);
+			}
+		}
+		geom->addPrimitiveSet(base);
+
+
+
+/*		for (int i = 0; i < time; i++)
 		{
 			int pand = sampleNum*i;
 			for (int j = pand; j < sampleNum-1+pand; j++)
@@ -758,7 +1119,7 @@ void segy::setUnitGeom(osg::ref_ptr<osg::Geometry> geom)
 				base->push_back(j+1);
 				geom->addPrimitiveSet(base);
 			}
-		}
+		}*/
 	}
 }
 
@@ -785,7 +1146,7 @@ void segy::outputFile()
 			{
 				if (out.is_open())   
 				{  
-					out << VolumeTrace[i][j][k];  
+//					out << VolumeTrace[i][j][k];  
 					out << "\t";    
 				}  
 			}
